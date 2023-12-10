@@ -10,4 +10,6 @@ __pycache__
 *_out.jpg
 build/
 dist/
+model.pth
+model.onnx
 *.egg-info/
