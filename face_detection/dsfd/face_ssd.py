@@ -119,7 +119,7 @@ class SSD(nn.Module):
         self.prior_cache[key] = prior.clone()
         return prior
 
-    def forward(self, x, confidence_threshold, nms_threshold):
+    def forward(self, x):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -138,6 +138,8 @@ class SSD(nn.Module):
                     2: localization layers, Shape: [batch,num_priors*4]
                     3: priorbox layers, Shape: [2,num_priors*4]
         """
+        confidence_threshold = 0.5
+        nms_threshold = 0.3
         image_size = [x.shape[2], x.shape[3]]
         loc = list()
         conf = list()
