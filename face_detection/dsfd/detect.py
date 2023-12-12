@@ -41,3 +41,20 @@ class DSFDDetector(Detector):
                 x, self.confidence_threshold, self.nms_iou_threshold
             )
         return boxes
+
+@DETECTOR_REGISTRY.register_module
+class DSFDDetectorTensorRT(Detector):
+
+    def __init__(
+        self, *args **kwargs):
+            super().__init__(*args, **kwargs)
+            self.ssd = SSD_TensorRT(resnet152_model_config)
+            self.ssd.load_state_dict(state_dict)
+            self.ssd.eval()
+            self.ssd = self.ssd.to(self.device)
+    @torch.no_grad()
+    def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
+        # turn x into bgr
+        sources = self.ssd(x)
+        return sources
+            
