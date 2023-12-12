@@ -1,6 +1,6 @@
 import time
 import torch
-from torch2trt_dynamic import torch2trt_dynamic
+import torch_tensorrt
 
 def benchmark(model, trt_model, input_shape, dtype=torch.float32):
   model = model.cuda().eval()
