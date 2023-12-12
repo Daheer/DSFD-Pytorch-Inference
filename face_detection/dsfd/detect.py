@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import typing
-from .face_ssd import SSD
+from .face_ssd import SSD, SSD_TensorRT, pa_multibox
 from .config import resnet152_model_config
 from .. import torch_utils
 from torch.hub import load_state_dict_from_url
@@ -25,6 +25,7 @@ class DSFDDetector(Detector):
         self.net.load_state_dict(state_dict)
         self.net.eval()
         self.net = self.net.to(self.device)
+       
 
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
@@ -52,9 +53,16 @@ class DSFDDetectorTensorRT(Detector):
             self.ssd.load_state_dict(state_dict)
             self.ssd.eval()
             self.ssd = self.ssd.to(self.device)
+            head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
+            self.loc = nn.ModuleList(head[0])
+            self.conf = nn.ModuleList(head[1])
+            self.softmax = nn.Softmax(dim=-1)
+            self.prior_cache = {
+            }
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
         # turn x into bgr
         sources = self.ssd(x)
+        
         return sources
             
