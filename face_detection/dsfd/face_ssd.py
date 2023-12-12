@@ -264,6 +264,20 @@ class DeepHeadModule(nn.Module):
         return out
 
 
+def mio_module(each_mmbox, len_conf):
+        chunk = torch.chunk(each_mmbox, each_mmbox.shape[1], 1)
+        bmax = torch.max(torch.max(chunk[0], chunk[1]), chunk[2])
+        if len_conf == 0:
+            out = torch.cat([bmax, chunk[3]], dim=1)
+        else:
+            out = torch.cat([chunk[3], bmax], dim=1)
+        if len(chunk) == 6:
+            out = torch.cat([out, chunk[4], chunk[5]], dim=1)
+        elif len(chunk) == 8:
+            out = torch.cat(
+                [out, chunk[4], chunk[5], chunk[6], chunk[7]], dim=1)
+        return out
+
 def pa_multibox(output_channels, mbox_cfg, num_classes):
     loc_layers = []
     conf_layers = []
