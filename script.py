@@ -61,12 +61,25 @@ def get_trt_model_dynamic(model, dtype = torch.float16, device = 'cuda'):
 
   return model_trt
 
+def get_trt_model(model, input_shape = [1, 3, 300, 300], dtype = torch.float16, device = 'cuda'):
+  model = model.to(device).eval()
+  if dtype == torch.float16:
+    model = model.half()
+  traced_model = torch.jit.trace(model, torch.rand(input_shape).to(device).half())
+
+  trt_model = torch_tensorrt.compile(traced_model, inputs = [torch_tensorrt.Input(
+      input_shape,
+      dtype = dtype)],
+    enabled_precisions = torch.half,
+  )
+  return trt_model
+
 from face_detection.dsfd.face_ssd import SSD_TensorRT
 
 from face_detection.dsfd.config import resnet152_model_config
 
 model = SSD_TensorRT(resnet152_model_config)
 model.load_state_dict(torch.load('model.pth'))
-trt_model = get_trt_model_dynamic(model)
+trt_model = get_trt_model(model)
 
 benchmark(model, trt_model, input_shape=[1, 3, 300, 300], dtype=torch.float16)
