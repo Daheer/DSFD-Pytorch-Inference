@@ -283,163 +283,163 @@ def pa_multibox(output_channels, mbox_cfg, num_classes):
             DeepHeadModule(input_channels, mbox_cfg[k] * (2+conf_output))]
     return (loc_layers, conf_layers)
 
-class SSD_TensorRT(nn.Module):
-    
+class FeatureEnhanceModule(nn.Module):
+
+def __init__(self, cfg):
+    super(FeatureEnhanceModule, self).__init__()
+    self.num_classes = 2 # Background and face
+    self.cfg = cfg
+
+    resnet = torchvision.models.resnet152(pretrained=False)
+    self.layer1 = nn.Sequential(
+        resnet.conv1, resnet.bn1, resnet.relu,
+        resnet.maxpool, resnet.layer1)
+    self.layer2 = nn.Sequential(resnet.layer2)
+    self.layer3 = nn.Sequential(resnet.layer3)
+    self.layer4 = nn.Sequential(resnet.layer4)
+    self.layer5 = nn.Sequential(
+        nn.Conv2d(2048, 512, kernel_size=1),
+        nn.BatchNorm2d(512),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(512, 512, kernel_size=3, padding=1, stride=2),
+        nn.BatchNorm2d(512),
+        nn.ReLU(inplace=True)
+    )
+    self.layer6 = nn.Sequential(
+        nn.Conv2d(512, 128, kernel_size=1),
+        nn.BatchNorm2d(128),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=2),
+        nn.BatchNorm2d(256),
+        nn.ReLU(inplace=True)
+    )
+
+    output_channels = [256, 512, 1024, 2048, 512, 256]
+
+    fpn_in = output_channels
+
+    self.latlayer3 = nn.Conv2d(fpn_in[3], fpn_in[2], kernel_size=1)
+    self.latlayer2 = nn.Conv2d(fpn_in[2], fpn_in[1], kernel_size=1)
+    self.latlayer1 = nn.Conv2d(fpn_in[1], fpn_in[0], kernel_size=1)
+
+    self.smooth3 = nn.Conv2d(fpn_in[2], fpn_in[2], kernel_size=1)
+    self.smooth2 = nn.Conv2d(fpn_in[1], fpn_in[1], kernel_size=1)
+    self.smooth1 = nn.Conv2d(fpn_in[0], fpn_in[0], kernel_size=1)
+
+    cpm_in = output_channels
+
+    self.cpm3_3 = FEM(cpm_in[0])
+    self.cpm4_3 = FEM(cpm_in[1])
+    self.cpm5_3 = FEM(cpm_in[2])
+    self.cpm7 = FEM(cpm_in[3])
+    self.cpm6_2 = FEM(cpm_in[4])
+    self.cpm7_2 = FEM(cpm_in[5])
+
+    # self.cpm3_3 = get_trt_model(FEM(cpm_in[0]), [1, cpm_in[0], 300, 300])
+    # self.cpm4_3 = get_trt_model(FEM(cpm_in[1]), [1, cpm_in[1], 300, 300])
+    # self.cpm5_3 = get_trt_model(FEM(cpm_in[2]), [1, cpm_in[2], 300, 300])
+    # self.cpm7 = get_trt_model(FEM(cpm_in[3]), [1, cpm_in[3], 300, 300])
+    # self.cpm6_2 = get_trt_model(FEM(cpm_in[4]), [1, cpm_in[4], 300, 300])
+    # self.cpm7_2 = get_trt_model(FEM(cpm_in[5]), [1, cpm_in[5], 300, 300])
+
+def _upsample_product(self, x, y):
+    return y * F.interpolate(
+        x, size=y.shape[2:], mode="bilinear", align_corners=True)
+
+def forward(self, x):
+  
+    # image_size = [x.shape[2], x.shape[3]]
+    # loc = list()
+    # conf = list()
+
+    # ResNet152
+    conv3_3_x = self.layer1(x)
+    conv4_3_x = self.layer2(conv3_3_x)
+    conv5_3_x = self.layer3(conv4_3_x)
+    fc7_x = self.layer4(conv5_3_x)
+    conv6_2_x = self.layer5(fc7_x)
+    conv7_2_x = self.layer6(conv6_2_x)
+
+    # FPN              
+    lfpn3 = self._upsample_product(
+        self.latlayer3(fc7_x), self.smooth3(conv5_3_x))
+    lfpn2 = self._upsample_product(
+        self.latlayer2(lfpn3), self.smooth2(conv4_3_x))
+    lfpn1 = self._upsample_product(
+        self.latlayer1(lfpn2), self.smooth1(conv3_3_x))
+
+    conv5_3_x = lfpn3
+    conv4_3_x = lfpn2
+    conv3_3_x = lfpn1
+
+    return self.cpm3_3(conv3_3_x), self.cpm4_3(conv4_3_x), self.cpm5_3(conv5_3_x), self.cpm7(fc7_x), self.cpm6_2(conv6_2_x), self.cpm7_2(conv7_2_x)
+
+class SSD_TensorRT_Wrap(nn.Module):
     def __init__(self, cfg):
-        super(SSD_TensorRT, self).__init__()
-        self.num_classes = 2 # Background and face
-        self.cfg = cfg
+        super(self, SSD_TensorRT_Wrap).__init__()
+        self.feature_enhancer = FeatureEnhanceModule()
+        head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
+        self.loc = nn.ModuleList(head[0])
+        self.conf = nn.ModuleList(head[1])
 
-        resnet = torchvision.models.resnet152(pretrained=False)
-        self.layer1 = nn.Sequential(
-            resnet.conv1, resnet.bn1, resnet.relu,
-            resnet.maxpool, resnet.layer1)
-        self.layer2 = nn.Sequential(resnet.layer2)
-        self.layer3 = nn.Sequential(resnet.layer3)
-        self.layer4 = nn.Sequential(resnet.layer4)
-        self.layer5 = nn.Sequential(
-            nn.Conv2d(2048, 512, kernel_size=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1, stride=2),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True)
-        )
-        self.layer6 = nn.Sequential(
-            nn.Conv2d(512, 128, kernel_size=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True)
-        )
+        self.softmax = nn.Softmax(dim=-1)
 
-        output_channels = [256, 512, 1024, 2048, 512, 256]
+        self.prior_cache = {
+        }
+    def mio_module(self, each_mmbox, len_conf):
+        chunk = torch.chunk(each_mmbox, each_mmbox.shape[1], 1)
+        bmax = torch.max(torch.max(chunk[0], chunk[1]), chunk[2])
+        if len_conf == 0:
+            out = torch.cat([bmax, chunk[3]], dim=1)
+        else:
+            out = torch.cat([chunk[3], bmax], dim=1)
+        if len(chunk) == 6:
+            out = torch.cat([out, chunk[4], chunk[5]], dim=1)
+        elif len(chunk) == 8:
+            out = torch.cat(
+                [out, chunk[4], chunk[5], chunk[6], chunk[7]], dim=1)
+        return out
+    def init_priors(self, feature_maps, image_size):
+        key = ".".join([str(item) for i in range(len(feature_maps)) for item in feature_maps[i]]) + \
+              "," + ".".join([str(_) for _ in image_size])
+        if key in self.prior_cache:
+            return self.prior_cache[key].clone()
 
-        fpn_in = output_channels
-
-        self.latlayer3 = nn.Conv2d(fpn_in[3], fpn_in[2], kernel_size=1)
-        self.latlayer2 = nn.Conv2d(fpn_in[2], fpn_in[1], kernel_size=1)
-        self.latlayer1 = nn.Conv2d(fpn_in[1], fpn_in[0], kernel_size=1)
-
-        self.smooth3 = nn.Conv2d(fpn_in[2], fpn_in[2], kernel_size=1)
-        self.smooth2 = nn.Conv2d(fpn_in[1], fpn_in[1], kernel_size=1)
-        self.smooth1 = nn.Conv2d(fpn_in[0], fpn_in[0], kernel_size=1)
-
-        cpm_in = output_channels
-
-        self.cpm3_3 = FEM(cpm_in[0])
-        self.cpm4_3 = FEM(cpm_in[1])
-        self.cpm5_3 = FEM(cpm_in[2])
-        self.cpm7 = FEM(cpm_in[3])
-        self.cpm6_2 = FEM(cpm_in[4])
-        self.cpm7_2 = FEM(cpm_in[5])
-
-        # self.cpm3_3 = get_trt_model(FEM(cpm_in[0]), [1, cpm_in[0], 300, 300])
-        # self.cpm4_3 = get_trt_model(FEM(cpm_in[1]), [1, cpm_in[1], 300, 300])
-        # self.cpm5_3 = get_trt_model(FEM(cpm_in[2]), [1, cpm_in[2], 300, 300])
-        # self.cpm7 = get_trt_model(FEM(cpm_in[3]), [1, cpm_in[3], 300, 300])
-        # self.cpm6_2 = get_trt_model(FEM(cpm_in[4]), [1, cpm_in[4], 300, 300])
-        # self.cpm7_2 = get_trt_model(FEM(cpm_in[5]), [1, cpm_in[5], 300, 300])
-
-    def _upsample_product(self, x, y):
-        return y * F.interpolate(
-            x, size=y.shape[2:], mode="bilinear", align_corners=True)
+        priorbox = PriorBox(self.cfg, image_size, feature_maps)
+        prior = priorbox.forward()
+        self.prior_cache[key] = prior.clone()
+        return prior
 
     def forward(self, x):
-      
-        # image_size = [x.shape[2], x.shape[3]]
-        # loc = list()
-        # conf = list()
+        sources = self.feature_enhancer(x)
+        featuremap_size = []
+        for (x, l, c) in zip(sources, self.loc, self.conf):
+            featuremap_size.append([x.shape[2], x.shape[3]])
+            loc.append(l(x).permute(0, 2, 3, 1).contiguous())
 
-        # ResNet152
-        conv3_3_x = self.layer1(x)
-        conv4_3_x = self.layer2(conv3_3_x)
-        conv5_3_x = self.layer3(conv4_3_x)
-        fc7_x = self.layer4(conv5_3_x)
-        conv6_2_x = self.layer5(fc7_x)
-        conv7_2_x = self.layer6(conv6_2_x)
+            # Max in out
+            len_conf = len(conf)
+            out = self.mio_module(c(x), len_conf)
 
-        # FPN              
-        lfpn3 = self._upsample_product(
-            self.latlayer3(fc7_x), self.smooth3(conv5_3_x))
-        lfpn2 = self._upsample_product(
-            self.latlayer2(lfpn3), self.smooth2(conv4_3_x))
-        lfpn1 = self._upsample_product(
-            self.latlayer1(lfpn2), self.smooth1(conv3_3_x))
-
-        conv5_3_x = lfpn3
-        conv4_3_x = lfpn2
-        conv3_3_x = lfpn1
-
-        return self.cpm3_3(conv3_3_x), self.cpm4_3(conv4_3_x), self.cpm5_3(conv5_3_x), self.cpm7(fc7_x), self.cpm6_2(conv6_2_x), self.cpm7_2(conv7_2_x)
-
-    class SSD_TensorRT_Wrap(nn.Module):
-        def __init__(self, cfg):
-            super(self, SSD_TensorRT_Wrap).__init__()
-            self.feature_enhancer = SSD_TensorRT()
-            head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
-            self.loc = nn.ModuleList(head[0])
-            self.conf = nn.ModuleList(head[1])
-    
-            self.softmax = nn.Softmax(dim=-1)
-    
-            self.prior_cache = {
-            }
-        def mio_module(self, each_mmbox, len_conf):
-            chunk = torch.chunk(each_mmbox, each_mmbox.shape[1], 1)
-            bmax = torch.max(torch.max(chunk[0], chunk[1]), chunk[2])
-            if len_conf == 0:
-                out = torch.cat([bmax, chunk[3]], dim=1)
-            else:
-                out = torch.cat([chunk[3], bmax], dim=1)
-            if len(chunk) == 6:
-                out = torch.cat([out, chunk[4], chunk[5]], dim=1)
-            elif len(chunk) == 8:
-                out = torch.cat(
-                    [out, chunk[4], chunk[5], chunk[6], chunk[7]], dim=1)
-            return out
-        def init_priors(self, feature_maps, image_size):
-            key = ".".join([str(item) for i in range(len(feature_maps)) for item in feature_maps[i]]) + \
-                  "," + ".".join([str(_) for _ in image_size])
-            if key in self.prior_cache:
-                return self.prior_cache[key].clone()
-    
-            priorbox = PriorBox(self.cfg, image_size, feature_maps)
-            prior = priorbox.forward()
-            self.prior_cache[key] = prior.clone()
-            return prior
-
-        def forward(self, x):
-            sources = self.feature_enhancer(x)
-            featuremap_size = []
-            for (x, l, c) in zip(sources, self.loc, self.conf):
-                featuremap_size.append([x.shape[2], x.shape[3]])
-                loc.append(l(x).permute(0, 2, 3, 1).contiguous())
-    
-                # Max in out
-                len_conf = len(conf)
-                out = self.mio_module(c(x), len_conf)
-    
-                conf.append(out.permute(0, 2, 3, 1).contiguous())
-            # Progressive Anchor
-            mbox_num = self.cfg['mbox'][0]
-            face_loc = torch.cat([
-                o[:, :, :, :4*mbox_num].contiguous().view(o.size(0), -1)
-                for o in loc], dim=1)
-            face_conf = torch.cat([
-                o[:, :, :, :2*mbox_num].contiguous().view(o.size(0), -1)
-                for o in conf], dim=1)
-            # Test Phase
-            self.priors = self.init_priors(featuremap_size, image_size)
-            self.priors = self.priors.to(face_conf.device)
-            conf_preds = face_conf.view(
-                face_conf.size(0), -1, self.num_classes).softmax(dim=-1)
-            face_loc = face_loc.view(face_loc.size(0), -1, 4)
-            boxes = batched_decode(
-                face_loc, self.priors,
-                self.cfg["variance"]
-            )
-            scores = conf_preds.view(-1, self.priors.shape[0], 2)[:, :, 1:]
-            output = torch.cat((boxes, scores), dim=-1)
-            return output
+            conf.append(out.permute(0, 2, 3, 1).contiguous())
+        # Progressive Anchor
+        mbox_num = self.cfg['mbox'][0]
+        face_loc = torch.cat([
+            o[:, :, :, :4*mbox_num].contiguous().view(o.size(0), -1)
+            for o in loc], dim=1)
+        face_conf = torch.cat([
+            o[:, :, :, :2*mbox_num].contiguous().view(o.size(0), -1)
+            for o in conf], dim=1)
+        # Test Phase
+        self.priors = self.init_priors(featuremap_size, image_size)
+        self.priors = self.priors.to(face_conf.device)
+        conf_preds = face_conf.view(
+            face_conf.size(0), -1, self.num_classes).softmax(dim=-1)
+        face_loc = face_loc.view(face_loc.size(0), -1, 4)
+        boxes = batched_decode(
+            face_loc, self.priors,
+            self.cfg["variance"]
+        )
+        scores = conf_preds.view(-1, self.priors.shape[0], 2)[:, :, 1:]
+        output = torch.cat((boxes, scores), dim=-1)
+        return output
