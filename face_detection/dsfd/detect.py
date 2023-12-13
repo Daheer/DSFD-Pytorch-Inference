@@ -10,7 +10,7 @@ from ..base import Detector
 from ..build import DETECTOR_REGISTRY
 
 model_url = "https://api.loke.aws.unit.no/dlr-gui-backend-resources-content/v2/contents/links/61be4ec7-8c11-4a4a-a9f4-827144e4ab4f0c2764c1-80a0-4083-bbfa-68419f889b80e4692358-979b-458e-97da-c1a1660b3314"
-
+import time
 def benchmark(model, trt_model, input_shape, dtype=torch.float16):
   model = model.cuda().eval()
   inp = torch.rand(input_shape).cuda()
