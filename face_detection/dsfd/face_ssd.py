@@ -94,7 +94,7 @@ class SSD(nn.Module):
         self.cpm7 = FEM(cpm_in[3])
         self.cpm6_2 = FEM(cpm_in[4])
         self.cpm7_2 = FEM(cpm_in[5])
-
+        
         head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
         self.loc = nn.ModuleList(head[0])
         self.conf = nn.ModuleList(head[1])
@@ -375,6 +375,7 @@ class SSD_TensorRT(nn.Module):
         self.cfg = cfg
         self.num_classes = 2
         self.feature_enhancer = FeatureEnhanceModule(cfg)
+        output_channels = [256, 512, 1024, 2048, 512, 256]
         head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
         self.loc = nn.ModuleList(head[0])
         self.conf = nn.ModuleList(head[1])
