@@ -12,7 +12,7 @@ DETECTOR_REGISTRY = Registry("DETECTORS")
 
 
 def build_detector(
-        name: str = "DSFDDetectorTensorRT",
+        name: str = "DSFDDetector",
         confidence_threshold: float = 0.5,
         nms_iou_threshold: float = 0.3,
         device=get_device(),
