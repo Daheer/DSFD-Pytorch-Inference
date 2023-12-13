@@ -1,6 +1,25 @@
 import torch
 import math
+import torch_tensorrt
 
+def get_trt_model(model, device = 'cuda', fp16 = True):
+    input_shape = [1, 3, 300, 300]
+    model = model.to(device).eval()
+    input_ = torch.rand(input_shape).to(device)
+    if fp16: 
+        model = model.half()
+        input_ = input_.half()
+        dtype = torch.float16
+    else: dtype = torch.float32
+    
+    traced_model = torch.jit.trace(model, input_)
+    
+    trt_model = torch_tensorrt.compile(traced_model, inputs = [torch_tensorrt.Input(
+      input_shape,
+      dtype = dtype)],
+    enabled_precisions = torch.half if fp16 else torch.float32,
+    )
+    return trt_model
 
 class PriorBox(object):
     """Compute priorbox coordinates in center-offset form for each source
