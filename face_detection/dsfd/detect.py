@@ -49,10 +49,11 @@ class DSFDDetectorTensorRT(Detector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        state_dict = load_state_dict_from_url(
-            model_url,
-            map_location=self.device,
-            progress=True)
+        # state_dict = load_state_dict_from_url(
+        #     model_url,
+        #     map_location=self.device,
+        #     progress=True)
+        state_dict = torch.load('model.pth')
         self.ssd = SSD_TensorRT(resnet152_model_config)
         self.ssd.feature_enhancer.load_state_dict(state_dict)
         self.ssd.feture_enhancer = get_trt_model(self.ssd.feature_enhancer)
