@@ -341,6 +341,15 @@ class FeatureEnhanceModule(nn.Module):
         # self.cpm7 = get_trt_model(FEM(cpm_in[3]), [1, cpm_in[3], 300, 300])
         # self.cpm6_2 = get_trt_model(FEM(cpm_in[4]), [1, cpm_in[4], 300, 300])
         # self.cpm7_2 = get_trt_model(FEM(cpm_in[5]), [1, cpm_in[5], 300, 300])
+
+        head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
+        self.loc = nn.ModuleList(head[0])
+        self.conf = nn.ModuleList(head[1])
+
+        self.softmax = nn.Softmax(dim=-1)
+
+        self.prior_cache = {
+        }
     
     def _upsample_product(self, x, y):
         return y * F.interpolate(
