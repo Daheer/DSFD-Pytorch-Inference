@@ -59,11 +59,12 @@ class DSFDDetectorTensorRT(Detector):
         self.ssd.feture_enhancer = get_trt_model(self.ssd.feature_enhancer)
         self.ssd.eval()
         self.ssd = self.ssd.to(self.device)
-            
+        self.fp16_inference = True
+    
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
         x = x[:, [2, 1, 0], :, :]
-        import pdb; pdb.set_trace()
+        
         with torch.cuda.amp.autocast(enabled=self.fp16_inference):
             boxes = self.ssd(
                 x
