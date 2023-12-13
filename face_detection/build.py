@@ -5,13 +5,14 @@ from .torch_utils import get_device
 available_detectors = [
     "DSFDDetector",
     "RetinaNetResNet50",
-    "RetinaNetMobileNetV1"
+    "RetinaNetMobileNetV1",
+    "DSFDDetectorTensorRT"
 ]
 DETECTOR_REGISTRY = Registry("DETECTORS")
 
 
 def build_detector(
-        name: str = "DSFDDetector",
+        name: str = "DSFDDetectorTensorRT",
         confidence_threshold: float = 0.5,
         nms_iou_threshold: float = 0.3,
         device=get_device(),
