@@ -285,66 +285,66 @@ def pa_multibox(output_channels, mbox_cfg, num_classes):
 
 class FeatureEnhanceModule(nn.Module):
 
-def __init__(self, cfg):
-    super(FeatureEnhanceModule, self).__init__()
-    self.num_classes = 2 # Background and face
-    self.cfg = cfg
-
-    resnet = torchvision.models.resnet152(pretrained=False)
-    self.layer1 = nn.Sequential(
-        resnet.conv1, resnet.bn1, resnet.relu,
-        resnet.maxpool, resnet.layer1)
-    self.layer2 = nn.Sequential(resnet.layer2)
-    self.layer3 = nn.Sequential(resnet.layer3)
-    self.layer4 = nn.Sequential(resnet.layer4)
-    self.layer5 = nn.Sequential(
-        nn.Conv2d(2048, 512, kernel_size=1),
-        nn.BatchNorm2d(512),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(512, 512, kernel_size=3, padding=1, stride=2),
-        nn.BatchNorm2d(512),
-        nn.ReLU(inplace=True)
-    )
-    self.layer6 = nn.Sequential(
-        nn.Conv2d(512, 128, kernel_size=1),
-        nn.BatchNorm2d(128),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=2),
-        nn.BatchNorm2d(256),
-        nn.ReLU(inplace=True)
-    )
-
-    output_channels = [256, 512, 1024, 2048, 512, 256]
-
-    fpn_in = output_channels
-
-    self.latlayer3 = nn.Conv2d(fpn_in[3], fpn_in[2], kernel_size=1)
-    self.latlayer2 = nn.Conv2d(fpn_in[2], fpn_in[1], kernel_size=1)
-    self.latlayer1 = nn.Conv2d(fpn_in[1], fpn_in[0], kernel_size=1)
-
-    self.smooth3 = nn.Conv2d(fpn_in[2], fpn_in[2], kernel_size=1)
-    self.smooth2 = nn.Conv2d(fpn_in[1], fpn_in[1], kernel_size=1)
-    self.smooth1 = nn.Conv2d(fpn_in[0], fpn_in[0], kernel_size=1)
-
-    cpm_in = output_channels
-
-    self.cpm3_3 = FEM(cpm_in[0])
-    self.cpm4_3 = FEM(cpm_in[1])
-    self.cpm5_3 = FEM(cpm_in[2])
-    self.cpm7 = FEM(cpm_in[3])
-    self.cpm6_2 = FEM(cpm_in[4])
-    self.cpm7_2 = FEM(cpm_in[5])
-
-    # self.cpm3_3 = get_trt_model(FEM(cpm_in[0]), [1, cpm_in[0], 300, 300])
-    # self.cpm4_3 = get_trt_model(FEM(cpm_in[1]), [1, cpm_in[1], 300, 300])
-    # self.cpm5_3 = get_trt_model(FEM(cpm_in[2]), [1, cpm_in[2], 300, 300])
-    # self.cpm7 = get_trt_model(FEM(cpm_in[3]), [1, cpm_in[3], 300, 300])
-    # self.cpm6_2 = get_trt_model(FEM(cpm_in[4]), [1, cpm_in[4], 300, 300])
-    # self.cpm7_2 = get_trt_model(FEM(cpm_in[5]), [1, cpm_in[5], 300, 300])
-
-def _upsample_product(self, x, y):
-    return y * F.interpolate(
-        x, size=y.shape[2:], mode="bilinear", align_corners=True)
+    def __init__(self, cfg):
+        super(FeatureEnhanceModule, self).__init__()
+        self.num_classes = 2 # Background and face
+        self.cfg = cfg
+    
+        resnet = torchvision.models.resnet152(pretrained=False)
+        self.layer1 = nn.Sequential(
+            resnet.conv1, resnet.bn1, resnet.relu,
+            resnet.maxpool, resnet.layer1)
+        self.layer2 = nn.Sequential(resnet.layer2)
+        self.layer3 = nn.Sequential(resnet.layer3)
+        self.layer4 = nn.Sequential(resnet.layer4)
+        self.layer5 = nn.Sequential(
+            nn.Conv2d(2048, 512, kernel_size=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1, stride=2),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True)
+        )
+        self.layer6 = nn.Sequential(
+            nn.Conv2d(512, 128, kernel_size=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=2),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True)
+        )
+    
+        output_channels = [256, 512, 1024, 2048, 512, 256]
+    
+        fpn_in = output_channels
+    
+        self.latlayer3 = nn.Conv2d(fpn_in[3], fpn_in[2], kernel_size=1)
+        self.latlayer2 = nn.Conv2d(fpn_in[2], fpn_in[1], kernel_size=1)
+        self.latlayer1 = nn.Conv2d(fpn_in[1], fpn_in[0], kernel_size=1)
+    
+        self.smooth3 = nn.Conv2d(fpn_in[2], fpn_in[2], kernel_size=1)
+        self.smooth2 = nn.Conv2d(fpn_in[1], fpn_in[1], kernel_size=1)
+        self.smooth1 = nn.Conv2d(fpn_in[0], fpn_in[0], kernel_size=1)
+    
+        cpm_in = output_channels
+    
+        self.cpm3_3 = FEM(cpm_in[0])
+        self.cpm4_3 = FEM(cpm_in[1])
+        self.cpm5_3 = FEM(cpm_in[2])
+        self.cpm7 = FEM(cpm_in[3])
+        self.cpm6_2 = FEM(cpm_in[4])
+        self.cpm7_2 = FEM(cpm_in[5])
+    
+        # self.cpm3_3 = get_trt_model(FEM(cpm_in[0]), [1, cpm_in[0], 300, 300])
+        # self.cpm4_3 = get_trt_model(FEM(cpm_in[1]), [1, cpm_in[1], 300, 300])
+        # self.cpm5_3 = get_trt_model(FEM(cpm_in[2]), [1, cpm_in[2], 300, 300])
+        # self.cpm7 = get_trt_model(FEM(cpm_in[3]), [1, cpm_in[3], 300, 300])
+        # self.cpm6_2 = get_trt_model(FEM(cpm_in[4]), [1, cpm_in[4], 300, 300])
+        # self.cpm7_2 = get_trt_model(FEM(cpm_in[5]), [1, cpm_in[5], 300, 300])
+    
+    def _upsample_product(self, x, y):
+        return y * F.interpolate(
+            x, size=y.shape[2:], mode="bilinear", align_corners=True)
 
 def forward(self, x):
   
