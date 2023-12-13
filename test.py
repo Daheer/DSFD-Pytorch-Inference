@@ -15,7 +15,7 @@ if __name__ == "__main__":
     impaths = "images"
     impaths = glob.glob(os.path.join(impaths, "*.jpg"))
     detector = face_detection.build_detector(
-        "DSFDDetector",
+        "DSFDDetectorTensorRT",
         max_resolution=1080
     )
     for impath in impaths:
