@@ -106,8 +106,8 @@ class DSFDDetectorTensorRT(Detector):
         self.ssd = self.ssd.to(self.device)
         benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1,3,300,300])
         self.fp16_inference = True
-        self.nms_threshold = 0.5
-        self.conf_threshold = 0.5
+        self.nms_threshold = 0.9
+        self.conf_threshold = 0.9
     
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
