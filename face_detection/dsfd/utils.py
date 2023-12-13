@@ -18,6 +18,7 @@ def get_trt_model(model, device = 'cuda', fp16 = True):
       input_shape,
       dtype = dtype)],
     enabled_precisions = torch.half if fp16 else torch.float32,
+    ir = "torchscript"
     )
     return trt_model
 
