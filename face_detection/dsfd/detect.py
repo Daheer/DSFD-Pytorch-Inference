@@ -98,11 +98,12 @@ class DSFDDetectorTensorRT(Detector):
         #     progress=True)
         state_dict = torch.load('model.pth')
         self.ssd = SSD_TensorRT(resnet152_model_config)
-        self.ssd.feature_enhancer.load_state_dict(state_dict)
+        torch_model = self.ssd # Remove later
+        self.ssd.feature_enhancer = self.ssd.feature_enhancer.load_state_dict(state_dict)
         self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer)
-        import pdb; pdb.set_trace()
         self.ssd.eval()
         self.ssd = self.ssd.to(self.device)
+        benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1,3,300,300])
         self.fp16_inference = True
     
     @torch.no_grad()
