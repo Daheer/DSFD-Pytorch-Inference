@@ -100,6 +100,7 @@ class DSFDDetectorTensorRT(Detector):
         self.ssd = SSD_TensorRT(resnet152_model_config)
         self.ssd.feature_enhancer.load_state_dict(state_dict)
         self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer)
+        import pdb; pdb.set_trace()
         self.ssd.eval()
         self.ssd = self.ssd.to(self.device)
         self.fp16_inference = True
