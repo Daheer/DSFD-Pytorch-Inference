@@ -21,6 +21,8 @@ if __name__ == "__main__":
     for impath in impaths:
         if impath.endswith("out.jpg"): continue
         im = cv2.imread(impath)
+        #===================
+        im = cv2.resize(im, (300, 300), interpolation = cv2.INTER_AREA)
         print("Processing:", impath)
         t = time.time()
         dets = detector.detect(
