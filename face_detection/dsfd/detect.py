@@ -1,9 +1,10 @@
 import torch
 import numpy as np
 import typing
-from .face_ssd import SSD, SSD_TensorRT, pa_multibox
+from .face_ssd import SSD, SSD_TensorRT
 from .config import resnet152_model_config
 from .. import torch_utils
+from .utils import get_trt_model
 from torch.hub import load_state_dict_from_url
 from ..base import Detector
 from ..build import DETECTOR_REGISTRY
