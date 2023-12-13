@@ -63,6 +63,7 @@ class DSFDDetectorTensorRT(Detector):
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
         x = x[:, [2, 1, 0], :, :]
+        import pdb; pdb.set_trace()
         with torch.cuda.amp.autocast(enabled=self.fp16_inference):
             boxes = self.ssd(
                 x
