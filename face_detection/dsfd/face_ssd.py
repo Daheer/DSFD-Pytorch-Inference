@@ -374,9 +374,9 @@ def forward(self, x):
 
     return self.cpm3_3(conv3_3_x), self.cpm4_3(conv4_3_x), self.cpm5_3(conv5_3_x), self.cpm7(fc7_x), self.cpm6_2(conv6_2_x), self.cpm7_2(conv7_2_x)
 
-class SSD_TensorRT_Wrap(nn.Module):
+class SSD_TensorRT(nn.Module):
     def __init__(self, cfg):
-        super(self, SSD_TensorRT_Wrap).__init__()
+        super(self, SSD_TensorRT).__init__()
         self.feature_enhancer = FeatureEnhanceModule()
         head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
         self.loc = nn.ModuleList(head[0])
