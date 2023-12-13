@@ -102,6 +102,7 @@ class DSFDDetectorTensorRT(Detector):
         torch_model.load_state_dict(state_dict) # Remove later
         self.ssd.feature_enhancer.load_state_dict(state_dict)
         self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer)
+        self.ssd.feature_enhancer.eval()
         self.ssd.eval()
         self.ssd = self.ssd.to(self.device)
         benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1,3,300,300])
