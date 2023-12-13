@@ -371,7 +371,7 @@ class FeatureEnhanceModule(nn.Module):
 
 class SSD_TensorRT(nn.Module):
     def __init__(self, cfg):
-        super(self, SSD_TensorRT).__init__()
+        super(SSD_TensorRT, self).__init__()
         
         self.feature_enhancer = FeatureEnhanceModule()
         head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
