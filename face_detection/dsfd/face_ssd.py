@@ -346,12 +346,7 @@ class FeatureEnhanceModule(nn.Module):
         return y * F.interpolate(
             x, size=y.shape[2:], mode="bilinear", align_corners=True)
 
-    def forward(self, x):
-      
-        # image_size = [x.shape[2], x.shape[3]]
-        # loc = list()
-        # conf = list()
-    
+    def forward(self, x):    
         # ResNet152
         conv3_3_x = self.layer1(x)
         conv4_3_x = self.layer2(conv3_3_x)
@@ -377,6 +372,7 @@ class FeatureEnhanceModule(nn.Module):
 class SSD_TensorRT(nn.Module):
     def __init__(self, cfg):
         super(self, SSD_TensorRT).__init__()
+        
         self.feature_enhancer = FeatureEnhanceModule()
         head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
         self.loc = nn.ModuleList(head[0])
@@ -411,6 +407,9 @@ class SSD_TensorRT(nn.Module):
         return prior
 
     def forward(self, x):
+        image_size = [x.shape[2], x.shape[3]]
+        loc = list()
+        conf = list()
         sources = self.feature_enhancer(x)
         featuremap_size = []
         for (x, l, c) in zip(sources, self.loc, self.conf):
