@@ -49,20 +49,21 @@ class DSFDDetectorTensorRT(Detector):
     def __init__(
         self, *args **kwargs):
             super().__init__(*args, **kwargs)
+            state_dict = load_state_dict_from_url(
+                model_url,
+                map_location=self.device,
+                progress=True)
             self.ssd = SSD_TensorRT(resnet152_model_config)
-            self.ssd.load_state_dict(state_dict)
+            self.ssd.feature_enhancer.load_state_dict(state_dict)
+            self.ssd.feture_enhancer = get_trt_model(self.ssd.feature_enhancer)
             self.ssd.eval()
             self.ssd = self.ssd.to(self.device)
-            head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
-            self.loc = nn.ModuleList(head[0])
-            self.conf = nn.ModuleList(head[1])
-            self.softmax = nn.Softmax(dim=-1)
-            self.prior_cache = {
-            }
+            
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
-        # turn x into bgr
-        sources = self.ssd(x)
-        
-        return sources
-            
+        x = x[:, [2, 1, 0], :, :]
+        with torch.cuda.amp.autocast(enabled=self.fp16_inference):
+            boxes = self.net(
+                x, self.confidence_threshold, self.nms_iou_threshold
+            )
+        return boxes
