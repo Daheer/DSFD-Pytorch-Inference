@@ -263,21 +263,6 @@ class DeepHeadModule(nn.Module):
         out = self.conv4(out)
         return out
 
-
-def mio_module(each_mmbox, len_conf):
-        chunk = torch.chunk(each_mmbox, each_mmbox.shape[1], 1)
-        bmax = torch.max(torch.max(chunk[0], chunk[1]), chunk[2])
-        if len_conf == 0:
-            out = torch.cat([bmax, chunk[3]], dim=1)
-        else:
-            out = torch.cat([chunk[3], bmax], dim=1)
-        if len(chunk) == 6:
-            out = torch.cat([out, chunk[4], chunk[5]], dim=1)
-        elif len(chunk) == 8:
-            out = torch.cat(
-                [out, chunk[4], chunk[5], chunk[6], chunk[7]], dim=1)
-        return out
-
 def pa_multibox(output_channels, mbox_cfg, num_classes):
     loc_layers = []
     conf_layers = []
@@ -297,20 +282,6 @@ def pa_multibox(output_channels, mbox_cfg, num_classes):
         conf_layers += [
             DeepHeadModule(input_channels, mbox_cfg[k] * (2+conf_output))]
     return (loc_layers, conf_layers)
-
-def init_priors(self, feature_maps, image_size):
-
-    # Hacky key system, but works....
-    key = ".".join([str(item) for i in range(len(feature_maps)) for item in feature_maps[i]]) + \
-          "," + ".".join([str(_) for _ in image_size])
-    if key in self.prior_cache:
-        return self.prior_cache[key].clone()
-
-    priorbox = PriorBox(self.cfg, image_size, feature_maps)
-    prior = priorbox.forward()
-    self.prior_cache[key] = prior.clone()
-    return prior
-
 
 class SSD_TensorRT(nn.Module):
     
@@ -371,15 +342,6 @@ class SSD_TensorRT(nn.Module):
         # self.cpm6_2 = get_trt_model(FEM(cpm_in[4]), [1, cpm_in[4], 300, 300])
         # self.cpm7_2 = get_trt_model(FEM(cpm_in[5]), [1, cpm_in[5], 300, 300])
 
-        head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
-        self.loc = nn.ModuleList(head[0])
-        self.conf = nn.ModuleList(head[1])
-
-        self.softmax = nn.Softmax(dim=-1)
-
-        self.prior_cache = {
-        }
-
     def _upsample_product(self, x, y):
         return y * F.interpolate(
             x, size=y.shape[2:], mode="bilinear", align_corners=True)
@@ -412,35 +374,72 @@ class SSD_TensorRT(nn.Module):
 
         return self.cpm3_3(conv3_3_x), self.cpm4_3(conv4_3_x), self.cpm5_3(conv5_3_x), self.cpm7(fc7_x), self.cpm6_2(conv6_2_x), self.cpm7_2(conv7_2_x)
 
-    def get_boxes_scores(sources, loc, conf, mio_module, cfg, init_priors, num_classes):
-        featuremap_size = []
-        for (x, l, c) in zip(sources, self.loc, self.conf):
-            featuremap_size.append([x.shape[2], x.shape[3]])
-            loc.append(l(x).permute(0, 2, 3, 1).contiguous())
+    class SSD_TensorRT_Wrap(nn.Module):
+        def __init__(self, cfg):
+            super(self, SSD_TensorRT_Wrap).__init__()
+            self.feature_enhancer = SSD_TensorRT()
+            head = pa_multibox(output_channels, self.cfg['mbox'], self.num_classes)  
+            self.loc = nn.ModuleList(head[0])
+            self.conf = nn.ModuleList(head[1])
+    
+            self.softmax = nn.Softmax(dim=-1)
+    
+            self.prior_cache = {
+            }
+        def mio_module(self, each_mmbox, len_conf):
+            chunk = torch.chunk(each_mmbox, each_mmbox.shape[1], 1)
+            bmax = torch.max(torch.max(chunk[0], chunk[1]), chunk[2])
+            if len_conf == 0:
+                out = torch.cat([bmax, chunk[3]], dim=1)
+            else:
+                out = torch.cat([chunk[3], bmax], dim=1)
+            if len(chunk) == 6:
+                out = torch.cat([out, chunk[4], chunk[5]], dim=1)
+            elif len(chunk) == 8:
+                out = torch.cat(
+                    [out, chunk[4], chunk[5], chunk[6], chunk[7]], dim=1)
+            return out
+        def init_priors(self, feature_maps, image_size):
+            key = ".".join([str(item) for i in range(len(feature_maps)) for item in feature_maps[i]]) + \
+                  "," + ".".join([str(_) for _ in image_size])
+            if key in self.prior_cache:
+                return self.prior_cache[key].clone()
+    
+            priorbox = PriorBox(self.cfg, image_size, feature_maps)
+            prior = priorbox.forward()
+            self.prior_cache[key] = prior.clone()
+            return prior
 
-            # Max in out
-            len_conf = len(conf)
-            out = self.mio_module(c(x), len_conf)
-
-            conf.append(out.permute(0, 2, 3, 1).contiguous())
-        # Progressive Anchor
-        mbox_num = self.cfg['mbox'][0]
-        face_loc = torch.cat([
-            o[:, :, :, :4*mbox_num].contiguous().view(o.size(0), -1)
-            for o in loc], dim=1)
-        face_conf = torch.cat([
-            o[:, :, :, :2*mbox_num].contiguous().view(o.size(0), -1)
-            for o in conf], dim=1)
-        # Test Phase
-        self.priors = self.init_priors(featuremap_size, image_size)
-        self.priors = self.priors.to(face_conf.device)
-        conf_preds = face_conf.view(
-            face_conf.size(0), -1, self.num_classes).softmax(dim=-1)
-        face_loc = face_loc.view(face_loc.size(0), -1, 4)
-        boxes = batched_decode(
-            face_loc, self.priors,
-            self.cfg["variance"]
-        )
-        scores = conf_preds.view(-1, self.priors.shape[0], 2)[:, :, 1:]
-        output = torch.cat((boxes, scores), dim=-1)
-        return output
+        def forward(self, x):
+            sources = self.feature_enhancer(x)
+            featuremap_size = []
+            for (x, l, c) in zip(sources, self.loc, self.conf):
+                featuremap_size.append([x.shape[2], x.shape[3]])
+                loc.append(l(x).permute(0, 2, 3, 1).contiguous())
+    
+                # Max in out
+                len_conf = len(conf)
+                out = self.mio_module(c(x), len_conf)
+    
+                conf.append(out.permute(0, 2, 3, 1).contiguous())
+            # Progressive Anchor
+            mbox_num = self.cfg['mbox'][0]
+            face_loc = torch.cat([
+                o[:, :, :, :4*mbox_num].contiguous().view(o.size(0), -1)
+                for o in loc], dim=1)
+            face_conf = torch.cat([
+                o[:, :, :, :2*mbox_num].contiguous().view(o.size(0), -1)
+                for o in conf], dim=1)
+            # Test Phase
+            self.priors = self.init_priors(featuremap_size, image_size)
+            self.priors = self.priors.to(face_conf.device)
+            conf_preds = face_conf.view(
+                face_conf.size(0), -1, self.num_classes).softmax(dim=-1)
+            face_loc = face_loc.view(face_loc.size(0), -1, 4)
+            boxes = batched_decode(
+                face_loc, self.priors,
+                self.cfg["variance"]
+            )
+            scores = conf_preds.view(-1, self.priors.shape[0], 2)[:, :, 1:]
+            output = torch.cat((boxes, scores), dim=-1)
+            return output
