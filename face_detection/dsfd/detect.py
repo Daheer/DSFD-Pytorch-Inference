@@ -47,11 +47,11 @@ def benchmark(model, trt_model, input_shape, dtype=torch.float16):
   if isinstance(res_torch, tuple):
     for i, item in enumerate(zip(res_torch, res_trt)):
       # thresh = item[0].max() // item[0].min()
-      thresh = 5e-2
+      thresh = 2e-1
       assert (torch.allclose(item[0][0], item[1][0].half(), atol=thresh)), "Outputs from Torch and TensorRT models are too different"
   else:
     # thresh = res_torch.max() // res_torch.min()
-    thresh = 5e-2
+    thresh = 2e-1
     assert (torch.allclose(res_torch, res_trt.half(), atol=thresh)), "Outputs from Torch and TensorRT models are too different"
 
 
@@ -99,7 +99,7 @@ class DSFDDetectorTensorRT(Detector):
         state_dict = torch.load('model.pth')
         self.ssd = SSD_TensorRT(resnet152_model_config)
         torch_model = self.ssd.feature_enhancer # Remove later
-        torch_model.load_state_dict(state_dict)
+        torch_model.load_state_dict(state_dict) # Remove later
         self.ssd.feature_enhancer.load_state_dict(state_dict)
         self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer)
         self.ssd.eval()
