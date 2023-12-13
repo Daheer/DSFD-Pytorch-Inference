@@ -47,7 +47,7 @@ class DSFDDetector(Detector):
 @DETECTOR_REGISTRY.register_module
 class DSFDDetectorTensorRT(Detector):
 
-    def __init__(self, *args **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         state_dict = load_state_dict_from_url(
             model_url,
