@@ -18,10 +18,9 @@ def resize_image(image):
     return padded_resized_image
 
 def draw_faces(im, bboxes):
-    h, w = im.shape[0], im.shape[1]
+    # h, w = im.shape[0], im.shape[1]
     for bbox in bboxes:
-        # x0, y0, x1, y1 = bbox * np_array([w, h, w, h])
-        bbox *= np_array([w, h, w, h])
+        # bbox *= np_array([w, h, w, h])
         x0, y0, x1, y1 = [int(_) for _ in bbox]
         cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), 2)
 
@@ -36,14 +35,14 @@ if __name__ == "__main__":
     for impath in impaths:
         if impath.endswith("out.jpg"): continue
         im = cv2.imread(impath)
-        resized_im = resize_image(im)
-        # im = cv2.resize(im, (300, 300), interpolation = cv2.INTER_AREA)
+        # resized_im = resize_image(im)
+        im = cv2.resize(im, (640, 640), interpolation = cv2.INTER_AREA)
         print("Processing:", impath)
         t = time.time()
         dets = detector.detect(
-            resized_im[:, :, ::-1]
+            im[:, :, ::-1]
         )[:, :4]
-        dets /= TARGET_WIDTH
+        #dets /= TARGET_WIDTH
         print(f"Detection time: {time.time()- t:.3f}")
         draw_faces(im, dets)
         imname = os.path.basename(impath).split(".")[0]
