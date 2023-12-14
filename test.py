@@ -20,7 +20,7 @@ def resize_image(image):
 def draw_faces(im, bboxes):
     h, w = im.shape[0], im.shape[1]
     for bbox in bboxes:
-        x0, y1, x1, y1 = bbox * np_array([w, h, w, h])
+        x0, y0, x1, y1 = bbox * np_array([w, h, w, h])
         x0, y0, x1, y1 = [int(_) for _ in bbox]
         cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), 2)
 
