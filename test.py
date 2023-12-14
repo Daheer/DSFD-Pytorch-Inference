@@ -36,7 +36,7 @@ if __name__ == "__main__":
         if impath.endswith("out.jpg"): continue
         im = cv2.imread(impath)
         # resized_im = resize_image(im)
-        im = cv2.resize(im, (640, 640), interpolation = cv2.INTER_AREA)
+        im = cv2.resize(im, (640, 480), interpolation = cv2.INTER_AREA)
         print("Processing:", impath)
         t = time.time()
         dets = detector.detect(
