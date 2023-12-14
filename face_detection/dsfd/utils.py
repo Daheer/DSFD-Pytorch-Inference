@@ -2,8 +2,8 @@ import torch
 import math
 import torch_tensorrt
 
-def get_trt_model(model, device = 'cuda', fp16 = True):
-    input_shape = [1, 3, 300, 300]
+def get_trt_model(model, input_shape = [1, 3, 640, 640], device = 'cuda', fp16 = True):
+    
     model = model.to(device).eval()
     input_ = torch.rand(input_shape).to(device)
     if fp16: 

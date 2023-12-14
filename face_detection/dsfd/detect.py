@@ -111,16 +111,13 @@ class DSFDDetectorTensorRT(Detector):
         pretrained_conf_state_dict = {key[5:]: value for key,value in state_dict.items() if key in conf_state_dict.keys()}
         self.ssd.conf.load_state_dict(pretrained_conf_state_dict)
 
-        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, fp16=False)
+        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 640, 640], fp16=False)
         self.ssd.feature_enhancer.eval()
         self.ssd.conf.eval()
         self.ssd.loc.eval()
         self.ssd.eval()
         self.ssd = self.ssd.to(self.device)
-        benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1,3,300,300], dtype=torch.float32)
-        #self.fp16_inference = True
-        # self.nms_threshold = 0.9
-        # self.conf_threshold = 0.9
+        benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1, 3, 640, 640], dtype=torch.float32)
     
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
