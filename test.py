@@ -40,7 +40,7 @@ if __name__ == "__main__":
         print("Processing:", impath)
         t = time.time()
         dets = detector.detect(
-            im[:, :, ::-1]
+            resized_im[:, :, ::-1]
         )[:, :4]
         dets /= TARGET_WIDTH
         print(f"Detection time: {time.time()- t:.3f}")
