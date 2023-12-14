@@ -2,7 +2,7 @@ import torch
 import math
 import torch_tensorrt
 
-def get_trt_model(model, input_shape = [1, 3, 640, 480], device = 'cuda', fp16 = True):
+def get_trt_model(model, input_shape = [1, 3, 480, 640], device = 'cuda', fp16 = True):
     
     model = model.to(device).eval()
     input_ = torch.rand(input_shape).to(device)

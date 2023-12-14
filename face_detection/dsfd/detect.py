@@ -67,7 +67,7 @@ class DSFDDetectorTensorRT(Detector):
         pretrained_conf_state_dict = {key[5:]: value for key,value in state_dict.items() if key in conf_state_dict.keys()}
         self.ssd.conf.load_state_dict(pretrained_conf_state_dict)
 
-        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 640, 480], fp16=False)
+        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 480, 640], fp16=False)
         self.ssd.feature_enhancer.eval()
         self.ssd.conf.eval()
         self.ssd.loc.eval()
