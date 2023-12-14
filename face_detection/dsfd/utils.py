@@ -17,7 +17,7 @@ def get_trt_model(model, input_shape = [1, 3, 640, 640], device = 'cuda', fp16 =
       input_shape,
       dtype = dtype)],
     enabled_precisions = dtype,
-    ir = 'torchsript',
+    ir = 'ts',
     )
     return trt_model
 
