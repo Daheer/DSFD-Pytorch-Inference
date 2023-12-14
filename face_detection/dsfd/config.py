@@ -4,7 +4,7 @@ resnet152_model_config = {
     'min_dim': 640,
     'steps': [4, 8, 16, 32, 64, 128],   # stride 
     'variance': [0.1, 0.2],
-    'clip': False,  # make default box in [0,1]
+    'clip': True,  # make default box in [0,1]
     'base': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512] , 
     'extras': [256, 'S', 512, 128, 'S', 256],
     'mbox': [1, 1, 1, 1, 1, 1] , 
