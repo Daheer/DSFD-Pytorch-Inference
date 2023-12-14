@@ -13,12 +13,11 @@ def get_trt_model(model, device = 'cuda', fp16 = True):
     else: dtype = torch.float32
     
     traced_model = torch.jit.trace(model, input_)
-    
+    print(f'Will script with {dtype}')
     trt_model = torch_tensorrt.compile(traced_model, inputs = [torch_tensorrt.Input(
       input_shape,
       dtype = dtype)],
-    enabled_precisions = torch.half if fp16 else torch.float32,
-    ir = "torchscript"
+    enabled_precisions = dtype,
     )
     return trt_model
 

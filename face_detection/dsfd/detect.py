@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 import typing
+import time
+from collections import OrderedDict
 from .face_ssd import SSD, SSD_TensorRT
 from .config import resnet152_model_config
 from .. import torch_utils
@@ -10,7 +12,6 @@ from ..base import Detector
 from ..build import DETECTOR_REGISTRY
 
 model_url = "https://api.loke.aws.unit.no/dlr-gui-backend-resources-content/v2/contents/links/61be4ec7-8c11-4a4a-a9f4-827144e4ab4f0c2764c1-80a0-4083-bbfa-68419f889b80e4692358-979b-458e-97da-c1a1660b3314"
-import time
 def benchmark(model, trt_model, input_shape, dtype=torch.float16):
   model = model.cuda().eval()
   inp = torch.rand(input_shape).cuda()
@@ -48,11 +49,11 @@ def benchmark(model, trt_model, input_shape, dtype=torch.float16):
     for i, item in enumerate(zip(res_torch, res_trt)):
       # thresh = item[0].max() // item[0].min()
       thresh = 5e-1
-      assert (torch.allclose(item[0][0], item[1][0].half(), atol=thresh)), "Outputs from Torch and TensorRT models are too different"
+      assert (torch.allclose(item[0][0], item[1][0], atol=thresh)), "Outputs from Torch and TensorRT models are too different"
   else:
     # thresh = res_torch.max() // res_torch.min()
     thresh = 5e-1
-    assert (torch.allclose(res_torch, res_trt.half(), atol=thresh)), "Outputs from Torch and TensorRT models are too different"
+    assert (torch.allclose(res_torch, res_trt, atol=thresh)), "Outputs from Torch and TensorRT models are too different"
 
 
 @DETECTOR_REGISTRY.register_module
@@ -101,12 +102,25 @@ class DSFDDetectorTensorRT(Detector):
         torch_model = self.ssd.feature_enhancer # Remove later
         torch_model.load_state_dict(state_dict) # Remove later
         self.ssd.feature_enhancer.load_state_dict(state_dict)
-        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer)
+        
+        loc_state_dict = self.ssd.loc.state_dict()
+        loc_state_dict = OrderedDict(("loc." + key, value) for key, value in loc_state_dict.items())
+        pretrained_loc_state_dict = {key[4:]: value for key, value in state_dict.items() if key in loc_state_dict.keys()}
+        self.ssd.loc.load_state_dict(pretrained_loc_state_dict)
+        
+        conf_state_dict = self.ssd.conf.state_dict()
+        conf_state_dict = OrderedDict(("conf." + key, value) for key, value in conf_state_dict.items())
+        pretrained_conf_state_dict = {key[5:]: value for key,value in state_dict.items() if key in conf_state_dict.keys()}
+        self.ssd.conf.load_state_dict(pretrained_conf_state_dict)
+
+        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, fp16=False)
         self.ssd.feature_enhancer.eval()
+        self.ssd.conf.eval()
+        self.ssd.loc.eval()
         self.ssd.eval()
         self.ssd = self.ssd.to(self.device)
-        benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1,3,300,300])
-        self.fp16_inference = True
+        benchmark(torch_model, self.ssd.feature_enhancer, input_shape=[1,3,300,300], dtype=torch.float32)
+        #self.fp16_inference = True
         # self.nms_threshold = 0.9
         # self.conf_threshold = 0.9
     
@@ -114,12 +128,12 @@ class DSFDDetectorTensorRT(Detector):
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
         x = x[:, [2, 1, 0], :, :]
         
-        # with torch.cuda.amp.autocast(enabled=self.fp16_inference):
-        #     boxes = self.ssd(
-        #         x
-        #     )
+        with torch.cuda.amp.autocast(enabled=self.fp16_inference):
+            boxes = self.ssd(
+                x
+            )
 
-        if self.fp16_inference:
-          boxes = self.ssd(x.half())
+        #if self.fp16_inference:
+        #  boxes = self.ssd(x.half())
           
         return boxes
