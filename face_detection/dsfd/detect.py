@@ -12,6 +12,7 @@ from ..base import Detector
 from ..build import DETECTOR_REGISTRY
 
 model_url = "https://api.loke.aws.unit.no/dlr-gui-backend-resources-content/v2/contents/links/61be4ec7-8c11-4a4a-a9f4-827144e4ab4f0c2764c1-80a0-4083-bbfa-68419f889b80e4692358-979b-458e-97da-c1a1660b3314"
+
 def benchmark(model, trt_model, input_shape, dtype=torch.float16):
   model = model.cuda().eval()
   inp = torch.rand(input_shape).cuda()
@@ -48,11 +49,11 @@ def benchmark(model, trt_model, input_shape, dtype=torch.float16):
   if isinstance(res_torch, tuple):
     for i, item in enumerate(zip(res_torch, res_trt)):
       # thresh = item[0].max() // item[0].min()
-      thresh = 5e-1
+      thresh = 1e-3
       assert (torch.allclose(item[0][0], item[1][0], atol=thresh)), "Outputs from Torch and TensorRT models are too different"
   else:
     # thresh = res_torch.max() // res_torch.min()
-    thresh = 5e-1
+    thresh = 1e-3
     assert (torch.allclose(res_torch, res_trt, atol=thresh)), "Outputs from Torch and TensorRT models are too different"
 
 
@@ -93,10 +94,7 @@ class DSFDDetectorTensorRT(Detector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # state_dict = load_state_dict_from_url(
-        #     model_url,
-        #     map_location=self.device,
-        #     progress=True)
+
         state_dict = torch.load('model.pth')
         self.ssd = SSD_TensorRT(resnet152_model_config)
         torch_model = self.ssd.feature_enhancer # Remove later

@@ -29,6 +29,7 @@ if __name__ == "__main__":
         dets = detector.detect(
             im[:, :, ::-1]
         )[:, :4]
+        import pdb; pdb.set_trace()
         print(f"Detection time: {time.time()- t:.3f}")
         draw_faces(im, dets)
         imname = os.path.basename(impath).split(".")[0]

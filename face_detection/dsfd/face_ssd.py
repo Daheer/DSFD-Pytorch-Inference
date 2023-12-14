@@ -429,7 +429,6 @@ class SSD_TensorRT(nn.Module):
 
             # Max in out
             len_conf = len(conf)
-            import pdb; pdb.set_trace()
             out = self.mio_module(c(x), len_conf)
 
             conf.append(out.permute(0, 2, 3, 1).contiguous())
