@@ -52,12 +52,8 @@ class DSFDDetectorTensorRT(Detector):
         super().__init__(*args, **kwargs)
 
         # state_dict = torch.load('model.pth')
-        self.ssd = SSD_TensorRT(resnet152_model_config)
-
-        self.ssd.feature_enhancer = torch.jit.load('models/feature_enhancer.ts')
-        self.ssd.loc.load_state_dict(torch.load('models/loc.pth'))
-        self.ssd.conf.load_state_dict(torch.load('models/conf.pth'))
-
+        # self.ssd = SSD_TensorRT(resnet152_model_config)
+        
         # self.ssd.feature_enhancer.load_state_dict(state_dict)
         
         # loc_state_dict = self.ssd.loc.state_dict()
@@ -70,7 +66,13 @@ class DSFDDetectorTensorRT(Detector):
         # pretrained_conf_state_dict = {key[5:]: value for key,value in state_dict.items() if key in conf_state_dict.keys()}
         # self.ssd.conf.load_state_dict(pretrained_conf_state_dict)
 
-        # self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 480, 640], fp16=False)
+        # self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 480, 640], fp16=True)
+
+        self.ssd = SSD_TensorRT(resnet152_model_config)
+
+        self.ssd.feature_enhancer = torch.jit.load('models/feature_enhancer_fp16.ts')
+        self.ssd.loc.load_state_dict(torch.load('models/loc.pth'))
+        self.ssd.conf.load_state_dict(torch.load('models/conf.pth'))
 
         self.ssd.feature_enhancer.eval()
         self.ssd.conf.eval()
@@ -78,6 +80,8 @@ class DSFDDetectorTensorRT(Detector):
         self.ssd.eval()
 
         self.ssd = self.ssd.to(self.device)
+
+        self.fp16_inference = True
     
     @torch.no_grad()
     def _detect(self, x: torch.Tensor,) -> typing.List[np.ndarray]:
@@ -85,10 +89,7 @@ class DSFDDetectorTensorRT(Detector):
         
         with torch.cuda.amp.autocast(enabled=self.fp16_inference):
             boxes = self.ssd(
-                x
+                x.half()
             )
-
-        #if self.fp16_inference:
-        #  boxes = self.ssd(x.half())
           
         return boxes
