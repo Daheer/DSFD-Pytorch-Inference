@@ -51,27 +51,32 @@ class DSFDDetectorTensorRT(Detector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        state_dict = torch.load('model.pth')
+        # state_dict = torch.load('model.pth')
         self.ssd = SSD_TensorRT(resnet152_model_config)
-        torch_model = self.ssd.feature_enhancer # Remove later
-        torch_model.load_state_dict(state_dict) # Remove later
-        self.ssd.feature_enhancer.load_state_dict(state_dict)
-        
-        loc_state_dict = self.ssd.loc.state_dict()
-        loc_state_dict = OrderedDict(("loc." + key, value) for key, value in loc_state_dict.items())
-        pretrained_loc_state_dict = {key[4:]: value for key, value in state_dict.items() if key in loc_state_dict.keys()}
-        self.ssd.loc.load_state_dict(pretrained_loc_state_dict)
-        
-        conf_state_dict = self.ssd.conf.state_dict()
-        conf_state_dict = OrderedDict(("conf." + key, value) for key, value in conf_state_dict.items())
-        pretrained_conf_state_dict = {key[5:]: value for key,value in state_dict.items() if key in conf_state_dict.keys()}
-        self.ssd.conf.load_state_dict(pretrained_conf_state_dict)
 
-        self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 480, 640], fp16=False)
+        self.ssd.feature_enhancer = torch.jit.load('models/feature_enhancer.ts')
+        self.ssd.loc.load_state_dict(torch.load('models/loc.pth'))
+        self.ssd.conf.load_state_dict(torch.load('models/conf.pth'))
+
+        # self.ssd.feature_enhancer.load_state_dict(state_dict)
+        
+        # loc_state_dict = self.ssd.loc.state_dict()
+        # loc_state_dict = OrderedDict(("loc." + key, value) for key, value in loc_state_dict.items())
+        # pretrained_loc_state_dict = {key[4:]: value for key, value in state_dict.items() if key in loc_state_dict.keys()}
+        # self.ssd.loc.load_state_dict(pretrained_loc_state_dict)
+        
+        # conf_state_dict = self.ssd.conf.state_dict()
+        # conf_state_dict = OrderedDict(("conf." + key, value) for key, value in conf_state_dict.items())
+        # pretrained_conf_state_dict = {key[5:]: value for key,value in state_dict.items() if key in conf_state_dict.keys()}
+        # self.ssd.conf.load_state_dict(pretrained_conf_state_dict)
+
+        # self.ssd.feature_enhancer = get_trt_model(self.ssd.feature_enhancer, input_shape=[1, 3, 480, 640], fp16=False)
+
         self.ssd.feature_enhancer.eval()
         self.ssd.conf.eval()
         self.ssd.loc.eval()
         self.ssd.eval()
+
         self.ssd = self.ssd.to(self.device)
     
     @torch.no_grad()
